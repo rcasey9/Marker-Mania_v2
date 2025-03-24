@@ -34,7 +34,8 @@ for i = 1:length(trialList)
     fprintf(['\n\n\n\n\tProcessing Trial ' trialList{i} '\n\n\n\n\n'])
     doneWithTrial = false;
     kinFillStart = 0;
-    skipLabelAdjust = 0;
+    skipLabelAdjust = 1;
+    labelingIssue = 0;
     combinedProcessingPipeline = 'Reconstruct And Label';
     while ~doneWithTrial %replace with while loop later    
     baseFile = [folderPath '\' trialList{i}];
@@ -83,6 +84,7 @@ for i = 1:length(trialList)
     %%
     c3dFile = [folderPath '\Working\' trialList{i} '.c3d'];
     markerStruct = Vicon.ExtractMarkers(c3dFile);
+
     if kinFillStart
             markerStruct = kinFilling(markerStruct,markerStructRef,[folderPath '\Working\' trialList{i}],viconPath,folderPath);
             heavyOps = true;
@@ -327,6 +329,7 @@ for j = 1:length(allFileNames)
         % if strcmpi(combinedProcessingPipeline,'Reconstruct and Label Least Filtered')
         % end
         disp('%%%%%%%%%%%%%%%%% Gap Filling %%%%%%%%%%%%%%%%%')
+        try
         markerStruct = Rigid_Body_Fill_All_Gaps(markerSet, markerStruct, clusters,verbose);
         markerStruct = Rigid_Body_Fill_All_Gaps(markerSet, markerStruct, clusters,verbose);
         markerStruct = Find_Missing_First_And_Last_FramesV3(markerSet, markerStruct, markerStructRef, clusters,verbose);
@@ -339,6 +342,15 @@ for j = 1:length(allFileNames)
 
         %Check for missing markers (should all be filled)
         missing = checkForMissingMarkers(markerStruct, markerSet,verbose);
+        catch
+            if kinFillStart
+                doneWithTrial = true;
+                continue
+            end
+            kinFillStart = 1;
+            combinedProcessingPipeline = handleFailedTrial(2,combinedProcessingPipeline);
+            continue
+        end
         if missing
             heavyOps = true;
             
@@ -357,7 +369,7 @@ for j = 1:length(allFileNames)
             if heavyOps
                 disp('% Validating that Trial Quality was Preserved %')
                 markerDict = markerStruct2dict(markerStruct); 
-                missing = checkProcessed(clusters,markerDict,markerStructRef,cf,lp);
+                missing = checkProcessed(clusters,markerDict,markerStructRef,cf,lp,[folderPath '\Failed\Diagnostics\' trialList{i} '.txt']);
             end
        end
        if ~missing
@@ -373,6 +385,18 @@ for j = 1:length(allFileNames)
             createEndnoteFilter(folderPath,[filledC3D(1:end-4)]);
             delete([folderPath '\Working\' trialList{i} '.c3d'])
             delete([folderPath '\Working\' trialList{i} '.trial.enf'])
+            if exist([folderPath '\Failed\' trialList{i} '.c3d'],'file')
+                delete([folderPath '\Failed\' trialList{i} '.c3d'])
+            end
+            if exist([folderPath '\Failed\' trialList{i} '.trial.enf'],'file')
+                delete([folderPath '\Failed\' trialList{i} '.trial.enf'])
+            end
+            if exist([folderPath '\Failed\Diagnostics\' trialList{i} '.txt'],'file')
+                delete([folderPath '\Failed\Diagnostics\' trialList{i} '.txt'])
+            end
+            if exist([folderPath '\Failed\Diagnostics\' trialList{i} '_MarkerErrors.mat'],'file')
+                delete([folderPath '\Failed\Diagnostics\' trialList{i} '_MarkerErrors.mat'])
+            end
             delete(preppedC3D)
             delete([preppedC3D(1:end-4) '.trial.enf'])
             doneWithTrial = true;

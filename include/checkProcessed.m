@@ -1,6 +1,9 @@
-function missing = checkProcessed(clusters,markerDict,markerStructRef,cf,lp)
+function missing = checkProcessed(clusters,markerDict,markerStructRef,cf,lp,textFileName)
 markerDictRef = markerStruct2dict(markerStructRef);
 missing = false;
+totalMessage = [];
+markerErrors = [];
+markerErrorNames = {};
 try
 for cc = 1:length(clusters)
     cluster = clusters{cc};
@@ -63,25 +66,51 @@ for cc = 1:length(clusters)
         [b,a]=butter(4,fc/fn); %4th order butterworth filter
         filtMErr = filtfilt(b,a,mErr);
         if max(mErr) > maxErrThresh
-            disp([marker{1} ' has too much peak marker error: ' num2str(max(mErr))])
+            if ~contains(markerErrorNames,marker{1})
+            markerErrorNames{end+1} = marker{1};
+            markerErrors = [markerErrors, mErr];
+            end
+            disp([marker{1} ' has too much peak marker error: ' num2str(max(mErr)) ' at frame: ' num2str(find(mErr == max(mErr)))])
+            totalMessage = [totalMessage ;{marker{1} ' has too much peak marker error: ' num2str(max(mErr)) ' at frame: ' num2str(find(mErr == max(mErr)))}];
             missing = true;
         elseif rmse(zeros(length(filtMErr),1),filtMErr) > errThresh
+            if ~contains(markerErrorNames,marker{1})
+            markerErrorNames{end+1} = marker{1};
+            markerErrors = [markerErrors, mErr];
+            end
             missing = true;
             disp([marker{1} ' has too much total marker error: ' num2str(rmse(zeros(length(filtMErr),1),filtMErr))])
+            totalMessage = [totalMessage; {marker{1} ' has too much total marker error: ' num2str(rmse(zeros(length(filtMErr),1),filtMErr))}];
         end
         mErr = sort(mErr);
         if max(diff(mErr)) > 50
+            if ~contains(markerErrorNames,marker{1})
+            markerErrorNames{end+1} = marker{1};
+            markerErrors = [markerErrors, mErr];
+            end
             missing = true;
             warning([marker{1} ' has large discontinuities'])
+            totalMessage = [totalMessage ; {marker{1} ' has large discontinuities'}];
             
         end
         
     end
 end
 catch
+
     warning('Problem with Trial')
     missing = true;
 
 end
+if ~isempty(totalMessage)
 
+    T = array2table(markerErrors,'VariableNames',markerErrorNames);
+    save([textFileName(1:end-4) '_MarkerErrors.mat'],'T')
+    fileID = fopen(textFileName, 'w');
+    for fi = 1:size(totalMessage,1)
+fprintf(fileID, '%s\n', totalMessage{fi});
+    end
+fclose('all');
+pause(2)
+end
 end

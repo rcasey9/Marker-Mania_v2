@@ -2,7 +2,7 @@ clc; clear; close all;
 viconPath = getViconPath();
 %% Specify paths to folders where your data is stored
 
-folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX07\Biomechanics_data\DOE_TIA_EX_07_PROCESSED\New Session',...
+folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX08\Biomechanics_data\Full_Collection_PROCESSED\New Session-KE',...
     };
 skiplist = {};
 %% Specify your parameters
@@ -64,6 +64,7 @@ for ii = 1:length(folderList)
     checkMakeDir([folderPath '\Finished'])
     checkMakeDir([folderPath '\Working'])
     checkMakeDir([folderPath '\Failed'])
+    checkMakeDir([folderPath '\Failed\Diagnostics'])
     moveMarkersetFiles(folderPath)
     [clusters, clusters_jump_threshold, markerStructRef] = getMarkerSet(folderPath, viconPath,custom_jump_thresholds); %get markerstruct and reference frame from static trial
     trialList = getTrials(folderPath); % get trial list

@@ -2,12 +2,16 @@ function markerStruct = kinFilling(markerStruct,markerStructRef,trial,viconPath,
     %add artificial first and last frame to trial
     markers = fields(markerStructRef);
     trialMarkers = fields(markerStruct);
+    frames = length(markerStruct.(trialMarkers{1}).Header);
+    ts = markerStruct.(trialMarkers{1}).Header(1);
+    tl = markerStruct.(trialMarkers{1}).Header(end);
     for m = 1:length(markers)
         marker = markers{m};
         
         if ~any(contains(trialMarkers,marker))
-            headTemp = markerStruct.(trialMarkers{1}).Header + 1;
-            NaNpad = NaN(length(markerStruct.(trialMarkers{1}).Header)-2,1);
+
+            headTemp = [ts:tl+2]';
+            NaNpad = NaN(frames,1);
             %arr = table2array(markerStruct.(marker));
             
             xTemp = [markerStructRef.(marker).x(1); NaNpad; markerStructRef.(marker).x(1)];
@@ -39,7 +43,7 @@ function markerStruct = kinFilling(markerStruct,markerStructRef,trial,viconPath,
     c3dFile = [trial '.c3d'];
     kinc3d = [trial '_kinematic_filling.c3d'];
     Vicon.markerstoC3D(markerStruct,c3dFile,kinc3d)
-    
+
     
     createEndnoteFilter(folderPath,[trial '_kinematic_filling']);
     checkVicon(viconPath)
@@ -49,12 +53,32 @@ function markerStruct = kinFilling(markerStruct,markerStructRef,trial,viconPath,
      while doing_vicon_operations 
         try   
         vicon.OpenTrial([trial '_kinematic_filling'], 60);
-        vicon.RunPipeline('KinFill', '', 400);
+        vicon.RunPipeline('KinFill', '', 200);
         vicon.RunPipeline('ExportC3D', '', 100);
         vicon.SaveTrial(60);
         vicon.CloseTrial(60);
-        catch
-        
+        catch e
+
+
+            if strcmpi(e.message, 'Host application failed to respond to the information request.')
+                warning('Kinematic Fill Failed')
+                killVicon(viconPath);
+                checkReopenVicon(viconPath);
+                Vicon_Openned = false;
+                while ~Vicon_Openned
+                try
+                vicon = ViconNexus();
+                catch 
+                    pause(3)
+                    continue
+                end
+                Vicon_Openned = true;
+                end
+           
+                doing_vicon_operations = false;
+                break
+                
+            end
             createEndnoteFilter(folderPath,[trial '_kinematic_filling'])
             warning('Problem communicating with Vicon... Attempting to reconnect')
             checkReopenVicon(viconPath);
@@ -69,7 +93,7 @@ function markerStruct = kinFilling(markerStruct,markerStructRef,trial,viconPath,
             Vicon_Openned = true;
             end
             continue
-        
+
         end
         doing_vicon_operations = false;
      end
@@ -89,6 +113,10 @@ function markerStruct = kinFilling(markerStruct,markerStructRef,trial,viconPath,
      end     
      Vicon.markerstoC3D(markerStruct,c3dFile,c3dFile)
      files = dir(fullfile([folderPath '\Working\'],'*kinematic_filling*'));
+     for ff = 1:length(files)
+         delete([files(ff).folder '\' files(ff).name])
+     end
+     files = dir(fullfile([folderPath '\Failed\'],'*kinematic_filling*'));
      for ff = 1:length(files)
          delete([files(ff).folder '\' files(ff).name])
      end

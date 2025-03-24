@@ -2,7 +2,11 @@ clc; clear; close all;
 viconPath = getViconPath();
 %% Specify paths to folders where your data is stored
 
-folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX06\Biomechanics_data\DOE_TIA_EX_06_PROCESSED\New Session'};
+folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX06\Biomechanics_data\DOE_TIA_EX_06_PROCESSED\New Session',...
+    'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX08\Biomechanics_data\Full_Collection_PROCESSED\New Session-KE',...
+    'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX08\Biomechanics_data\Full_Collection_PROCESSED\New Session-LC',...
+    'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX08\Biomechanics_data\Full_Collection_PROCESSED\New Session-NoE',...
+    };
 skiplist = {};
 %% Specify your parameters
 paramStruct.verbose = false; % Determines if low level functions will print information
@@ -49,16 +53,16 @@ custom_jump_thresholds = {
 };
 
 
-%% Processing
+%% Check that folders are valid
 for i = 1:length(folderList)
-    folder =
-    if ~exist(directory, 'dir')
-    mkdir(directory)
+    folderPath = folderList{i};
+    if ~exist(folderPath, 'dir')
+    error(['Folder not found: ' newline folderPath])
+    end
 end
-end
-
+%% Processing
 for ii = 1:length(folderList)
-    tic
+
     folderPath = folderList{ii};
     checkMakeDir([folderPath '\Finished'])
     checkMakeDir([folderPath '\Working'])
@@ -69,7 +73,7 @@ for ii = 1:length(folderList)
     processTrials(clusters,clusters_jump_threshold, markerStructRef, skiplist,folderPath, trialList, viconPath, paramStruct)
     
     % Endnote_Pass(filePath)
-    toc
+
 end
 
 function checkMakeDir(directory)
