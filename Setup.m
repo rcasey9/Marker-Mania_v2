@@ -3,10 +3,10 @@ clc; close all; clear;
 directory = pwd;
 addpath([directory '\include'])
 addpath([directory '\MocapUtils'])
-addpath([directory '\MoCapTools-master'])
-addpath([directory '\MoCapTools-master\lib'])
-addpath([directory '\MoCapTools-master\extlib'])
-addpath([directory '\MoCapTools-master\extlib\btk'])
+addpath([directory '\MoCapTools'])
+addpath([directory '\MoCapTools\lib'])
+addpath([directory '\MoCapTools\extlib'])
+addpath([directory '\MoCapTools\extlib\btk'])
 
 ViconFolder = [];
 files = dir('C:\Program Files\Vicon');
