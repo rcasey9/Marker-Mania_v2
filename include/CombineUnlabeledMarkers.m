@@ -47,3 +47,4 @@ markerStructnameNum = length(markerStructname);
 if verbose
 disp(['Total Markers After Combining: ',num2str(markerStructnameNum)])
 end
+end

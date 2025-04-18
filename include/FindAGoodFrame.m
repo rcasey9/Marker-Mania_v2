@@ -14,11 +14,7 @@ diffMax = [0,0];
 reverseStr = '';
 for tt = 1:totalFrames
     loc = tt;
-    if verbose
-    msg = sprintf('Processed Frame %d/%d\n', loc, totalFrames);
-    fprintf([reverseStr, msg]);
-    reverseStr = repmat(sprintf('\b'), 1, length(msg));
-    end
+    
     rigidDiffs = [];
     for mm = 1:length(markerSet) % loop through marker set
         currentMarker = markerSet{mm};

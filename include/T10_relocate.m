@@ -10,7 +10,7 @@ if ~contains(filename,'fjc') & ~contains(filename,'Fjc') & ~contains(filename,'F
   c3dFile = [filename '.c3d'];
         
       
-    markerStruct = Vicon.ExtractMarkers(c3dFile);
+    markerStruct = Vicon.ExtractMarkers(c3dFile)
 
     % Loop through all markers
     markerStruct = T10(markerStruct);                         
@@ -48,7 +48,6 @@ function markerStruct = T10(markerStruct)
 
             end  
   if ~isfield(markerStruct,'T10')
-    markerStruct.T10 = table;
             markerStruct.T10.Header(1:length(markerStruct.(fields{1}).Header)) = [markerStruct.(fields{1}).Header]';
             markerStruct.T10.x(1:length(markerStruct.(fields{1}).Header)) = NaN;
             markerStruct.T10.y(1:length(markerStruct.(fields{1}).Header)) = NaN;
@@ -56,8 +55,7 @@ function markerStruct = T10(markerStruct)
   end
   
             for ff = 1:length(markerStruct.(fields{1}).Header)
-
-                   
+ 
                     markerStruct.T10.x(ff) = (3*markerStruct.MID_PSI.x(ff) + markerStruct.C7.x(ff))/4;
                     markerStruct.T10.y(ff) = markerStruct.T10_OFFSET.y(ff);
                     markerStruct.T10.z(ff) = (3*markerStruct.MID_PSI.z(ff) + markerStruct.C7.z(ff))/4;

@@ -20,6 +20,8 @@ coordinates = paramStruct.coordinates;
 xbound = paramStruct.xbound; % min & max coordinates for trajectories to appear
 ybound = paramStruct.ybound;
 zbound = paramStruct.zbound;
+progressBarEnable = paramStruct.progressBarEnable;
+multiSubs = paramStruct.multiSubs;
 
 %%  DEFINE RIGID BODY MARKER CLUSTERS
 
@@ -34,7 +36,6 @@ for i = 1:length(trialList)
     fprintf(['\n\n\n\n\tProcessing Trial ' trialList{i} '\n\n\n\n\n'])
     doneWithTrial = false;
     kinFillStart = 0;
-    skipLabelAdjust = 1;
     labelingIssue = 0;
     combinedProcessingPipeline = 'Reconstruct And Label';
     while ~doneWithTrial %replace with while loop later    
@@ -81,151 +82,294 @@ for i = 1:length(trialList)
         copyfile([baseFile '.c3d'],[folderPath '\Working\' trialList{i} '.c3d']);
         createEndnoteFilter(folderPath,[folderPath '\Working\' trialList{i}]);
     end
+    checkFileList = {};
     %%
     c3dFile = [folderPath '\Working\' trialList{i} '.c3d'];
-    markerStruct = Vicon.ExtractMarkers(c3dFile);
+    [markerStruct, markerOriginalNames] = Vicon.ExtractMarkers_multiSubs(c3dFile);
+            markerStructRaw = markerStruct;
+            debugFlag = 0; %debugFlag enables plotting
+            resetFlag = 0;
+            heavyProcessNum = 2; %usually 2 is good since raw trials can be really bad in some cases and not having enough information to detect markers
+            
+            % markerDict = markerStruct2dict(markerStruct);   
+            % TrialLength = getTrialLength(markerDict);
+            % parforProperties = parcluster;
+            % numWorkers = parforProperties.NumWorkers;
+            % cropLength = ceil((1/numWorkers/2)*TrialLength); % utlize the workers
+            % if cropLength > 1001
+            %     cropLength = 1001; %set max croplength to 1001 to avoid overload on memory
+            % end
+            % stepLength = ceil(cropLength/2);
 
-    if kinFillStart
-            markerStruct = kinFilling(markerStruct,markerStructRef,[folderPath '\Working\' trialList{i}],viconPath,folderPath);
-            heavyOps = true;
-    end
+            % if you don't like these crop length and step length, you can
+            % manually change them
+                fprintf(['\n\n' '%%%% Adjusting Marker Labels %%%%' '\n\n'])
+            cropLength = 301;
+            stepLength = 150;
+
+
+            processCounter = 1;
+            preprocessedFound = 1;
+
+            missingFlag = 0;
+            
+            % markerStruct = removeMarkerOutOfRegionOfInterest(markerStruct,840.7,279.4,nan,nan); % for trials in Treadmill region keep this
+            % markerStruct = removeMarkerOutOfRegionOfInterest(markerStruct,-4900,-5500,nan,nan); % for trials in Stair region keep this
+                
+            
+            while preprocessedFound
+                jump_threshold = clusters_jump_threshold;
+
+                % Crop the trials to small ones
+                if verbose
+                disp(['%%%%%Crop Length: ',num2str(cropLength),'%%%%%'])
+                end
+                markerStructTemp = cropTrialsSegments(markerStruct,cropLength);
+                
+                % Iterate through each small ones and process
+                SegLength = length(fieldnames(markerStructTemp));
     
+                % Find first instance of each marker in markerStruct
+                [firstInstanceStruct] = firstInstOfMarker(markerStruct);
 
-    jump_threshold = clusters_jump_threshold;
-    markerStruct = removeMarkerOutOfRegionOfInterest(markerStruct,xbound(2),xbound(1),zbound(2),zbound(1),verbose); % for trials in Treadmill region keep this
-    % markerStruct = removeMarkerOutOfRegionOfInterest(markerStruct,-4900,-5500,nan,nan); % for trials in Stair region keep this
+                clear markerStruct;
 
-    % The crop length is determined by the largest gap length
-    markerDict = markerStruct2dict(markerStruct);
-    if ~skipLabelAdjust
-    cropLength = getCropLength(markerDict);
-    %currently manually set to a fixed crop length to 301 frames
-    cropLength = 301;
+                processFoundList = zeros(SegLength,1);
+                
+                markerCellPreprocessedTemp = cell(SegLength,1);
+                % addAttachedFiles(gcp,["isKey"])
+                %% Progress Bar
+                if progressBarEnable
+                    try
+                        ppm = ParforProgressbar(SegLength,'showWorkerProgress', true,'progressBarUpdatePeriod', 1, 'title', [ ...
+                            trialList{i} ': Process Iteration: ' num2str(processCounter) ' CropLength= ' num2str(cropLength)]);
+                    catch ME
+                        if strcmp(ME.identifier,'MATLAB:UndefinedFunction')
+                            fprintf('\nMissing ''Instrument Control Toolbox'' Addons for ProgressBar functionality\nPlease install it from Matlab Add-Ons Tab\n\n');
+                        end
+                        rethrow(ME)
+                    end
+                end
+                %% parallel processing segments
+                parfor iii = 1:SegLength
+                % for iii = 1:SegLength %for debug
+                    currentSegName = ['Seg_',num2str(iii)];
+                    markerStruct = markerStructTemp.(currentSegName);
+                    clustertemp = clusters;
+                    markerDict = markerStruct2dict(markerStruct);                
+                    
+                    %%
+                    %find GoodFrames where all markers exisiting and correctly
+                    %labeled
+                    [GoodFrames,~] = FindAGoodFrame(markerDict,markerSet,markerDictRef,clustertemp,jump_threshold,verbose);
+                    %find GoodFramesByCluster where markers from each rigidbody is
+                    %correctly labeled
+                    [GoodFramesByCluster,~,~] = FindAGoodFrameByCluster(markerDict,markerSet,markerDictRef,clustertemp,jump_threshold,GoodFrames,verbose);
 
-    
-    % Crop the trials to small ones
-    %disp(['%%%%%Crop Length: ',num2str(cropLength),'%%%%%'])
-    markerStructTemp = cropTrialsSegments(markerStruct,cropLength);
-    
-    % Iterate through each small ones and process
-    SegLength = length(fieldnames(markerStructTemp));
+                    %% Remove the marker from the cluster if the marker is missing all the time
+                    % this section is to avoid script error when some markers
+                    % are completely missing throughout the trial
 
-    % Find first instance of each marker in markerStruct
-    [firstInstanceStruct] = firstInstOfMarker(markerStruct);
-    
-    markerCellPreprocessedTemp = cell(SegLength,1);
-    % addAttachedFiles(gcp,["isKey"])
-    disp('%%%%%%%%%%% Adjusting Marker Labels %%%%%%%%%%%')
-    parfor iii = 1:SegLength
-    % for iii = 1:SegLength
-        currentSegName = ['Seg_',num2str(iii)];
-        markerStruct = markerStructTemp.(currentSegName);
-        clustertemp = clusters;
-        markerDict = markerStruct2dict(markerStruct);                
+    %                 if missingFlag
+    %                     if isConfigured(GoodFramesByCluster)
+    %                         GoodFrames2Markers = keys(GoodFramesByCluster);
+    %                         GoodFrames2Locs = values(GoodFramesByCluster);
+    %                     else
+    %                         GoodFrames2Markers = {};
+    %                         GoodFrames2Locs = {};
+    %                     end
+    % %                     markersMissing = GoodFrames2Markers(cellfun(@isempty,GoodFrames2Locs));
+    %                     markersMissing = setdiff(markerSet,GoodFrames2Markers);
+    %                     for m = 1:length(markersMissing)
+    %                         marker = markersMissing{m};
+    %                         for n = 1:length(clustertemp)
+    %                             cluster = clustertemp{n};
+    %                             cluster(strcmp(cluster,marker)==1)=[];
+    %                             clustertemp{n} = cluster;
+    %                         end
+    %                     end
+    %                     cellfun(@(x) disp(['Please Double Check These Markers: ',x]), markersMissing, 'UniformOutput',false);
+    %     %                 continue
+    %                 end
+                    
+                    % Cmarker is the unlabeled markers
+                    markerDict = CmarkerJumpSegmentation(markerDict,verbose);
+                    markerSegDict = segmentMarkers(markerDict,verbose);
+                    % markerJumpSegmentation is to determine each continuous
+                    % marker trajectories. It includes the starting and ending
+                    % frame number for each trajectory segment. This can allow
+                    % us to drop any jumps which can be picked later on
+                    if processCounter <= heavyProcessNum || resetFlag == 1
+                        [markerDict,~] = markerJumpSegmentation(markerSet,markerSegDict,markerDict,GoodFrames,GoodFramesByCluster,verbose);
+                    end
+                    %% Relink Normal Markers
+                    relinkedFlag = 1;
+                    markerSetToLink = markerSet;
+                    % relink marker is a direct way to relabel the marker in
+                    % adjacent frames using least squared means
+                    while relinkedFlag
+                        [markerDict,markerSetToLink,relinkedFlag] = relinkMarkerSegmentation(markerSetToLink,markerDict,markerDictRef,clusters,10,debugFlag,verbose);
+                        processFoundList(iii) = processFoundList(iii) + 1;
+                    end
         
-        %%
-        %find GoodFrames where all markers exisiting and correctly
-        %labeled
-        [GoodFrames,~] = FindAGoodFrame(markerDict,markerSet,markerDictRef,clustertemp,jump_threshold,verbose);
-        %find GoodFrames2 where markers from each rigidbody is
-        %correctly labeled
-        [GoodFrames2,~,missingFlag] = FindAGoodFrameByCluster(markerDict,markerSet,markerDictRef,clustertemp,jump_threshold,GoodFrames,verbose);
-        
+                    %% Relabel
+                    tic;
+                    timelimit = 30; %Time limit to 30mins
+                    fillFlag = 1;
+                    markerDictTrimmed = markerDict;
+        %             relinkedFlag3 = 0;
+        %             markersetToFill3 = {};
+                    % this section is to label the markers using three
+                    % different methods: rigidbody fill, nearest neighbor
+                    % search, and pattern fill
+                    [markerDictTrimmed,markersetToFill1,relinkedFlag1] = relinkTrimmedMarkerSegmentationRigidBody(markerDictTrimmed,markerDictRef,clustertemp,markerSet,GoodFrames,GoodFramesByCluster,jump_threshold,debugFlag,verbose);
+                    [markerDictTrimmed,markersetToFill2,relinkedFlag2] = relinkTrimmedMarkerSegmentationNeighbor(markerDictTrimmed,markerDictRef,clustertemp,markerSet,jump_threshold,debugFlag,verbose);
+                    [markerDictTrimmed,markersetToFill3,relinkedFlag3] = relinkTrimmedMarkerSegmentationPattern2(markerDictTrimmed,clustertemp,markerSet,debugFlag,verbose);
+                    t = toc;
 
-        %% Remove the marker from the cluster if the marker is missing all the time
-        % this section is to avoid script error when some markers
-        % are completely missing throughout the trial
-        if missingFlag
-            if isConfigured(GoodFrames2)
-                GoodFrames2Markers = keys(GoodFrames2);
-                GoodFrames2Locs = values(GoodFrames2);
-            else
-                GoodFrames2Markers = {};
-                GoodFrames2Locs = {};
+                    while (relinkedFlag1 || relinkedFlag2 || relinkedFlag3) && t < 60*timelimit
+                        processFoundList(iii) = processFoundList(iii) + 1;
+                        t = toc;
+                        while (relinkedFlag1 || relinkedFlag2 || relinkedFlag3) && t < 60*timelimit  
+                            markersetToFill = unique([markersetToFill1(:)',markersetToFill2(:)',markersetToFill3(:)']);
+                            [markerDictTrimmed,markersetToFill1,relinkedFlag1] = relinkTrimmedMarkerSegmentationRigidBody(markerDictTrimmed,markerDictRef,clustertemp,markersetToFill,GoodFrames,GoodFramesByCluster,jump_threshold,debugFlag,verbose);
+                            [markerDictTrimmed,markersetToFill2,relinkedFlag2] = relinkTrimmedMarkerSegmentationNeighbor(markerDictTrimmed,markerDictRef,clustertemp,markersetToFill,jump_threshold,debugFlag,verbose);
+                            [markerDictTrimmed,markersetToFill3,relinkedFlag3] = relinkTrimmedMarkerSegmentationPattern2(markerDictTrimmed,clustertemp,markersetToFill,debugFlag,verbose);
+                        end
+                        [markerDictTrimmed,markersetToFill3,relinkedFlag3] = relinkTrimmedMarkerSegmentationPattern2(markerDictTrimmed,clustertemp,markerSet,debugFlag,verbose);
+                        [markerDictTrimmed,markersetToFill1,relinkedFlag1] = relinkTrimmedMarkerSegmentationRigidBody(markerDictTrimmed,markerDictRef,clustertemp,markerSet,GoodFrames,GoodFramesByCluster,jump_threshold,debugFlag,verbose);
+                        [markerDictTrimmed,markersetToFill2,relinkedFlag2] = relinkTrimmedMarkerSegmentationNeighbor(markerDictTrimmed,markerDictRef,clustertemp,markerSet,jump_threshold,debugFlag,verbose);
+                        t = toc;
+                    end
+                    markerDict = markerDictTrimmed;
+                    %%
+                    % Next GOAL: need to work on use pattern fill to find small segments
+                    %% save markerStruct for later debug
+        %             save(['debugMat\',fileName,'_preprocessed.mat'],"markerStruct")
+                    %%
+                    markerDict = CombineUnlabeledMarkers(markerDict,verbose);
+                    markerStruct = markerdict2struct(markerDict);
+                    % markerStruct = QuickFix(markerStruct);
+                    markerCellPreprocessedTemp{iii} = markerStruct;
+                    if progressBarEnable
+                        pause(0.1);
+                        ppm.increment();
+                    end
+                end
+                if progressBarEnable
+                    delete(ppm);
+                end
+                %% RUN SECTION HERE TO TEST combineTrialsSegments (debug purpose)
+                markerStructPreprocessedTemp = struct();
+                for iii = 1:SegLength
+                    currentSegName = ['Seg_',num2str(iii)];
+                    markerStructPreprocessedTemp.(currentSegName) = markerCellPreprocessedTemp{iii};
+                end
+    
+                %Combine the small segments back to original length
+                % [markerStruct, distStruct] = combineTrialsSegments2(markerStructPreprocessedTemp);
+                clear markerDict markerDictTrimmed
+                markerStruct = combineTrialsSegments(markerStructPreprocessedTemp);
+                clear markerStructPreprocessedTemp
+                %% next iteration
+                cropLength = cropLength + stepLength;
+                if any(processFoundList > 1) || processCounter == 1
+                    preprocessedFound = 1;
+                    processCounter = processCounter + 1;
+                else
+                    preprocessedFound = 0;
+                end
+
+                %% Check if markers are missing after two iterations.
+                if processCounter > 2
+                    [missingFlag,missingClusters] = checkForMissingClusters(markerStruct, clusters);
+                    if missingFlag
+                        break;
+                    end
+                end
+
+                %% save small trials for debugging (debug purpose)
+                % if contains(fileName,'preprocessed')
+                %     filledC3D = ([filePath,'\',fileName,'.c3d']);
+                % else
+                %     filledC3D = ([filePath,'\',fileName,'_preprocessed',num2str(processCounter),'.c3d']);
+                % end
+                % disp('    Writing new C3D file...')
+                % 
+                % markerStructTemp = markerStruct;
+                % markerStruct = restoreOriginalMarkerNames(markerStruct,markerOriginalNames);
+                % markerDict = markerStruct2dict(markerStruct);
+                % markerDict = CombineUnlabeledMarkers(markerDict);
+                % markerStruct = markerdict2struct(markerDict);
+                % Vicon.markerstoC3D_multiSubs(markerStruct, c3dFile, filledC3D);
+                % markerStruct = markerStructTemp;
+
+                 %% temp functions to fix the jumped markers without enough donors (debug purpose)
+                % if((~isfield(markerStruct,'RLELB')&&~isfield(markerStruct,'RMELB')) || (all(isnan(markerStruct.RLELB.x)) && all(isnan(markerStruct.RMELB.x))))
+                % 
+                % % if processCounter == 2 && ((~isfield(markerStruct,'RFIN2')&&~isfield(markerStruct,'RFIN5')) || (all(isnan(markerStruct.RFIN2.x)) && all(isnan(markerStruct.RFIN5.x))))
+                %     markerStruct = markerStructRaw;
+                %     markerStruct.RLELB.x = markerStructRaw.RMELB.x;
+                %     markerStruct.RLELB.y = markerStructRaw.RMELB.y;
+                %     markerStruct.RLELB.z = markerStructRaw.RMELB.z;
+                % 
+                %     markerStruct.RMELB.x = markerStructRaw.RLELB.x;
+                %     markerStruct.RMELB.y = markerStructRaw.RLELB.y;
+                %     markerStruct.RMELB.z = markerStructRaw.RLELB.z;
+                %     resetFlag = 1;
+                % else
+                %     resetFlag = 0;
+                % end
+                
             end
-%                     markersMissing = GoodFrames2Markers(cellfun(@isempty,GoodFrames2Locs));
-            markersMissing = setdiff(markerSet,GoodFrames2Markers);
-            for m = 1:length(markersMissing)
-                marker = markersMissing{m};
-                for n = 1:length(clustertemp)
-                    cluster = clustertemp{n};
-                    cluster(strcmp(cluster,marker)==1)=[];
-                    clustertemp{n} = cluster;
+            
+
+            %Save data
+%             markerStruct = markerdict2struct(markerDict);
+            if contains(trialList{i},'preprocessed')
+                filledC3D = ([folderPath,'\Working\',trialList{i},'.c3d']);
+                createEndnoteFilter(folderPath,[folderPath,'\Working\',trialList{i}]);
+            else
+                filledC3D = ([folderPath,'\Working\',trialList{i},'_preprocessed.c3d']);
+                createEndnoteFilter(folderPath,[folderPath,'\Working\',trialList{i},'_preprocessed']);
+            end
+            disp('    Writing new C3D file...')
+            %% this seciton removes the unlabeled markers
+            markerSet_names = fieldnames(markerStruct);
+            markerSet_names = markerSet_names(contains(markerSet_names,'C_'));
+            for zz = 1:length(markerSet_names)
+                checkMarker = markerSet_names{zz};
+                if ~any(~isnan(markerStruct.(checkMarker).x))
+                    markerStruct = rmfield(markerStruct,checkMarker);
                 end
             end
-           % cellfun(@(x) disp(['Please Double Check These Markers: ',x]), markersMissing, 'UniformOutput',false);
-%                 continue
-        end
-        
-        % Cmarker is the unlabeled markers
-        markerDict = CmarkerJumpSegmentation(markerDict,verbose);
-        markerSegDict = segmentMarkers(markerDict,verbose);
-        % markerJumpSegmentation is to determine each continuous
-        % marker trajectories. It includes the starting and ending
-        % frame number for each trajectory segment. This can allow
-        % us to drop any jumps which can be picked later on
-        [markerDict,~] = markerJumpSegmentation(markerSet,markerSegDict,markerDict,GoodFrames,GoodFrames2,verbose);
-
-        %% Relink Normal Markers
-        relinkedFlag = 1;
-        markerSetToLink = markerSet;
-        % relink marker is a direct way to relabel the marker in
-        % adjacent frames using least squared means
-        while relinkedFlag
-            [markerDict,markerSetToLink,relinkedFlag] = relinkMarkerSegmentation(markerSetToLink,markerDict,markerDictRef,clusters,5,debugFlag,verbose);
-        end
-
-
-        %% Relabel
-        tic;
-        timelimit = 30; %Time limit to 30mins
-        fillFlag = 1;
-        markerDictTrimmed = markerDict;
-%             relinkedFlag3 = 0;
-%             markersetToFill3 = {};
-        % this section is to label the markers using three
-        % different methods: rigidbody fill, nearest neighbor
-        % search, and pattern fill
-        
-        [markerDictTrimmed,markersetToFill1,relinkedFlag1] = relinkTrimmedMarkerSegmentationRigidBody(markerDictTrimmed,markerDictRef,clustertemp,markerSet,GoodFrames,GoodFrames2,jump_threshold,debugFlag,verbose);
-        [markerDictTrimmed,markersetToFill2,relinkedFlag2] = relinkTrimmedMarkerSegmentationNeighbor(markerDictTrimmed,markerDictRef,clustertemp,markerSet,jump_threshold,debugFlag,verbose);
-        [markerDictTrimmed,markersetToFill3,relinkedFlag3] = relinkTrimmedMarkerSegmentationPattern2(markerDictTrimmed,clustertemp,markerSet,debugFlag,verbose);
-        t = toc;
-        
-        while (relinkedFlag1 || relinkedFlag2 || relinkedFlag3) && t < 60*timelimit   
-            t = toc;
-            while (relinkedFlag1 || relinkedFlag2 || relinkedFlag3) && t < 60*timelimit  
-                markersetToFill = unique([markersetToFill1(:)',markersetToFill2(:)',markersetToFill3(:)']);
-                [markerDictTrimmed,markersetToFill1,relinkedFlag1] = relinkTrimmedMarkerSegmentationRigidBody(markerDictTrimmed,markerDictRef,clustertemp,markersetToFill,GoodFrames,GoodFrames2,jump_threshold,debugFlag,verbose);
-                [markerDictTrimmed,markersetToFill2,relinkedFlag2] = relinkTrimmedMarkerSegmentationNeighbor(markerDictTrimmed,markerDictRef,clustertemp,markersetToFill,jump_threshold,debugFlag,verbose);
-                [markerDictTrimmed,markersetToFill3,relinkedFlag3] = relinkTrimmedMarkerSegmentationPattern2(markerDictTrimmed,clustertemp,markersetToFill,debugFlag,verbose);
+            if multiSubs
+                markerStruct = restoreOriginalMarkerNames(markerStruct,markerOriginalNames,'DefaultName',SubjectName);
             end
-            [markerDictTrimmed,markersetToFill3,relinkedFlag3] = relinkTrimmedMarkerSegmentationPattern2(markerDictTrimmed,clustertemp,markerSet,debugFlag,verbose);
-            [markerDictTrimmed,markersetToFill1,relinkedFlag1] = relinkTrimmedMarkerSegmentationRigidBody(markerDictTrimmed,markerDictRef,clustertemp,markerSet,GoodFrames,GoodFrames2,jump_threshold,debugFlag,verbose);
-            [markerDictTrimmed,markersetToFill2,relinkedFlag2] = relinkTrimmedMarkerSegmentationNeighbor(markerDictTrimmed,markerDictRef,clustertemp,markerSet,jump_threshold,debugFlag,verbose);
-            t = toc;
-        end
-        markerDict = markerDictTrimmed;
+            markerDict = markerStruct2dict(markerStruct);
+            markerDict = CombineUnlabeledMarkers(markerDict,verbose);
+            markerStruct = markerdict2struct(markerDict);
+            % try
+            Vicon.markerstoC3D_multiSubs(markerStruct, c3dFile, filledC3D);
+            % catch
+            %     markerSetStruct = rmfield(markerStruct,markerSet_names);
+            %     warning(['File: ',c3dFile,' Removed all unlabeled Markers'])
+            %     Vicon.markerstoC3D(markerSetStruct, c3dFile, filledC3D);
+            % end
         
-        markerDict = CombineUnlabeledMarkers(markerDict,verbose);
-        markerStruct = markerdict2struct(markerDict);
-        % markerStruct = QuickFix(markerStruct);
-        markerCellPreprocessedTemp{iii} = markerStruct;
+    
+    if ~isempty(checkFileList)
+        disp('%%%Trials Failed Preprocessing. Need Manual Check of Trials%%%')
+        checkList = cell2table(checkFileList);
+        checkList.Properties.VariableNames = {'Trial Name','Cluster Name'};
+        disp(checkList)
+        error('Check Trials Before Gap Fill')
     end
-    %% RUN SECTION HERE TO TEST combineTrialsSegments
-    markerStructPreprocessedTemp = struct();
-    for iii = 1:SegLength
-        currentSegName = ['Seg_',num2str(iii)];
-        markerStructPreprocessedTemp.(currentSegName) = markerCellPreprocessedTemp{iii};
-    end
-
-    %Combine the small segments back to original length
-    [markerStruct, distStruct] = combineTrialsSegments(markerStructPreprocessedTemp);
 
     %% Check preprocessed outcome
     markerDict = markerStruct2dict(markerStruct);
     labelingIssue = checkPreprocessed(clusters,markerDict,markerStructRef);
-    end
+
     if labelingIssue
         if kinFillStart == 1
             kinFillStart = 0;

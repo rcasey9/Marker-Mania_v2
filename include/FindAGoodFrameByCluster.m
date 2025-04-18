@@ -26,6 +26,9 @@ end
 for tt = 1:totalFrames
     markerGoodlocs = dictionary();
     loc = tt;
+    % if loc == 345 %for debug
+    %     disp(' ')
+    % end
     if verbose
     msg = sprintf('Processed Frame %d/%d\n', loc, totalFrames);
     fprintf([reverseStr, msg]);
@@ -34,16 +37,14 @@ for tt = 1:totalFrames
     for ccs = 1:length(clusters)
         rigidDiffs = [];
         rigidDiffs2 = [];
+        rigidDiffsName = {};
         currentCluster = clusters{ccs};
         jump_threshold = cell2mat(cluster_jump_threshold{ccs});
         if length(currentCluster) < 4 && isempty(GoodFrameRef)
             for mm = 1:length(currentCluster)
                 currentMarker = currentCluster{mm};
-                if ~iskey(markerGoodlocs2,currentMarker)
-                    markerCoord = getMarkerCoordinates(markerDict,currentMarker,1:totalFrames);
-                    noNanLoc = find(~isnan(markerCoord(1,:)));
-                    noNanLoc = noNanLoc(1);
-                    markerGoodlocs2({currentMarker}) = noNanLoc;
+                if ~isConfigured(markerGoodlocs2) || ~isKey(markerGoodlocs2,{currentMarker})
+                    markerGoodlocs2({currentMarker}) = [];
                 end
             end
 
@@ -55,7 +56,8 @@ for tt = 1:totalFrames
             % coord = getMarkerCoordinates(markerDict,currentClusterMarker,loc);
             try
                 coord = getMarkerCoordinates(markerDict,currentClusterMarker,loc);
-            catch 
+            catch
+                currentClusters=setdiff(currentClusters,currentClusterMarker);
                 continue;  
             end
             if ~isKey(markerDict,{currentClusterMarker}) || any(isnan(coord(1,:))) % if the cluster contains the marker that we're currently looking at
@@ -64,12 +66,14 @@ for tt = 1:totalFrames
         end
         currentCluster=currentClusters;
         if length(currentCluster) >= 4
+            markerRemoveIdx = [];
             for cc = 1:length(currentCluster)
                 currentClusterMarker = currentCluster{cc};
                 % currentClusterMarkerCoordinate = getMarkerCoordinates(markerDict,currentClusterMarker,loc);
                 try
                     currentClusterMarkerCoordinate = getMarkerCoordinates(markerDict,currentClusterMarker,loc);
                 catch
+                    markerRemoveIdx(end+1) = cc;
                     continue;
                 end
                 
@@ -78,8 +82,8 @@ for tt = 1:totalFrames
                 temp_cluster(idx) = [];
                 otherClusterMarkers = temp_cluster;
         
-%                 donorFull = zeros(3, length(otherClusterMarkers));
-                donorTarget = zeros(3, length(otherClusterMarkers));
+                donorTarget = [];
+                donorFullStatic = [];
         
                 for cci = 1:length(otherClusterMarkers)
                     currentDonor = otherClusterMarkers{cci};
@@ -90,21 +94,11 @@ for tt = 1:totalFrames
                     catch
                         continue;
                     end
-                    donorTarget(:, cci) = currentCoordinate;
+                    donorTarget(:, end + 1) = currentCoordinate;
+                    currentCoordinate = getMarkerCoordinates(markerDictRef,currentDonor,1);
+                    donorFullStatic(:, end + 1) = currentCoordinate;
                 end
         
-                donorFullStatic = zeros(3, length(otherClusterMarkers));
-                for ccr = 1:length(otherClusterMarkers)
-                    currentDonor = otherClusterMarkers{ccr};
-                    % currentCoordinate = getMarkerCoordinates(markerDictRef,currentDonor,1);
-                    try
-                        currentCoordinate = getMarkerCoordinates(markerDictRef,currentDonor,1);
-                    catch
-                        continue;
-                    end
-
-                    donorFullStatic(:, ccr) = currentCoordinate;
-                end
         
                 donorFull = donorFullStatic;
                 pointFull = getMarkerCoordinates(markerDictRef,currentClusterMarker,1);
@@ -127,12 +121,18 @@ for tt = 1:totalFrames
                 end
                 rigidDiffs = vertcat(rigidDiffs,jumped);
                 rigidDiffs2 = vertcat(rigidDiffs2,rigidDiff);
+                rigidDiffsName{end+1} = currentClusterMarker;
             end
+
             if cc == length(currentCluster)
                 % diffMax = vertcat(diffMax,[loc,max(rigidDiffs)]);
-                if ~max(rigidDiffs)
+                if ~max(rigidDiffs) || sum(rigidDiffs == 0) >= 3
                     for mm = 1:length(currentCluster)
                         currentMarker = currentCluster{mm};
+                        rigidIdx = strcmp(currentMarker,rigidDiffsName);
+                        if rigidDiffs(rigidIdx)
+                            continue
+                        end
                         currentMarkerFreq = sum(cell2mat(cellfun(@(x) any(strcmp(x,currentMarker)), modifiedClusters, 'UniformOutput', false)));
                         if ~isConfigured(markerGoodlocs) || ~isKey(markerGoodlocs,{currentMarker})
                             markerGoodlocs({currentMarker}) = {[loc,1]};
@@ -147,7 +147,8 @@ for tt = 1:totalFrames
                         CurrentMarkerGoodlocs = markerGoodlocs({currentMarker});
                         CurrentMarkerGoodlocs = CurrentMarkerGoodlocs{:};
                         rowI = CurrentMarkerGoodlocs(:,1) == loc;
-                        if CurrentMarkerGoodlocs(rowI,2) == currentMarkerFreq
+                        % if CurrentMarkerGoodlocs(rowI,2) == currentMarkerFreq
+                        if CurrentMarkerGoodlocs(rowI,2) == currentMarkerFreq || CurrentMarkerGoodlocs(rowI,2) >= 2 %% temp set to 2 instead of the occurence of marker existing in clusters
                             if ~isConfigured(markerGoodlocs2) || ~isKey(markerGoodlocs2,{currentMarker})
                                 markerGoodlocs2({currentMarker}) = {loc};
                             else
@@ -162,6 +163,8 @@ for tt = 1:totalFrames
         end
     end
 end
+
+%% This section deals with markers that has no good frames
 if ~isConfigured(markerGoodlocs2) || length(keys(markerGoodlocs2)) < length(markerSet)
     if ~isConfigured(markerGoodlocs2)
         diffNames = markerSet;
@@ -173,16 +176,17 @@ if ~isConfigured(markerGoodlocs2) || length(keys(markerGoodlocs2)) < length(mark
         if ~isKey(markerDict,{currentMissingMarker})
             markerGoodlocs2({currentMissingMarker}) = [];
             missingFlag = 1;
-        else
-            currentMissingMarkerCoordinate = getMarkerCoordinates(markerDict,currentMissingMarker,1:totalFrames);
-            noNanLoc = find(~isnan(currentMissingMarkerCoordinate(1,:)));
-            if isempty(noNanLoc)
-%                 markerGoodlocs2({currentMissingMarker}) = [];
-                missingFlag = 1;
-            else
-                noNanLoc = noNanLoc(1);
-                markerGoodlocs2({currentMissingMarker}) = {noNanLoc};
-            end
+%         else
+%             %% here assume the first frame is correct, which is wrong in parfor now. Thus, this section is disabled
+%             currentMissingMarkerCoordinate = getMarkerCoordinates(markerDict,currentMissingMarker,1:totalFrames);
+%             noNanLoc = find(~isnan(currentMissingMarkerCoordinate(1,:)));
+%             if isempty(noNanLoc)
+% %                 markerGoodlocs2({currentMissingMarker}) = [];
+%                 missingFlag = 1;
+%             else
+%                 noNanLoc = noNanLoc(1);
+%                 markerGoodlocs2({currentMissingMarker}) = {noNanLoc};
+%             end
         end
     end
 end

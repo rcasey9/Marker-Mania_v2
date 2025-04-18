@@ -19,11 +19,12 @@ reverseStr = '';
 
 for mm = 1:length(markerSet) % loop through marker set
     currentMarker = markerSet{mm};
-    if verbose
     msg = sprintf('Processed C Markers %d/%d\nGenerated Markers: %d \n', mm, length(markerSet),length(markerStructnames));
+    if verbose
     fprintf([reverseStr, msg]);
-    reverseStr = repmat(sprintf('\b'), 1, length(msg));
     end
+    reverseStr = repmat(sprintf('\b'), 1, length(msg));
+    
     markerSegs = segmentSingleMarker(markerDict,{currentMarker});
     markerSegs = markerSegs{:};
 

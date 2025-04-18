@@ -7,7 +7,9 @@ folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\D
 skiplist = {};
 %% Specify your parameters
 paramStruct.verbose = false; % Determines if low level functions will print information
-paramStruct.cf = 200; % collection frequency = 200 Hz
+paramStruct.cf = 200;
+paramStruct.progressBarEnable = 1;% collection frequency = 200 Hz
+paramStruct.multiSubs = 0;
 paramStruct.lp = 6; % Lowpass filter cutoff freq (6 is standard, consider raising if you have high frequency tasks)
 paramStruct.jumpThreshold = 12; % How far does have to jump in a s ingle frame to be flagged?
 paramStruct.jumpSpeedThreshold = 7.5; % How fast does have to jump in a single frame to be flagged?

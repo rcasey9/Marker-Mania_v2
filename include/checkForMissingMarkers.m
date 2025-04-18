@@ -1,14 +1,10 @@
-function [missing] = checkForMissingMarkers(markerStruct, markerSet,verbose)
-missing = false;
+function checkForMissingMarkers(markerStruct, markerSet)
+
+missingFrames = Vicon.findGaps(markerStruct); % find missing frames
 for mm = 1:length(markerSet)
     currentMarker = markerSet{mm};
-    if contains(currentMarker(1:2),'C_')==0
-        if any([any(isnan(markerStruct.(currentMarker).x)), any(isnan(markerStruct.(currentMarker).y)),any(isnan(markerStruct.(currentMarker).z))])
-        missing = true;
-        if verbose
+    if isempty(missingFrames.(currentMarker))==0 && contains(currentMarker,'C_')==0
         disp(['    MISSING:',currentMarker])
-        end
-        end
     end
 end
 

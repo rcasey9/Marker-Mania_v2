@@ -30,9 +30,10 @@ refmarkerset = unique(markersetCluster);
 
 for mm = 1:length(refmarkerset) % loop through marker set
     currentMarker = refmarkerset{mm};
-    if ~isKey(markerDict,{currentMarker})
-        continue
-    end
+    
+    % if ~isKey(markerDict,{currentMarker})
+    %     continue
+    % end
     reverseFlag = 0;
     GoodFrameFound = 1;
     if ~isempty(GoodFrames)
@@ -80,6 +81,7 @@ for mm = 1:length(refmarkerset) % loop through marker set
         
         for ii = 1:length(itr_dir)
             checkLoc = itr_dir(ii);
+            
             foundFlag = 0;
             cord = getMarkerCoordinates(markerDict,currentMarker,checkLoc)';
             if ~isnan(cord(:,1))
@@ -93,11 +95,12 @@ for mm = 1:length(refmarkerset) % loop through marker set
                 donorTarget = []; % initiate
                 donorFullStatic = []; % initiate
                 
-
+                currentClusterRemovedNaNs = [];
                 for cci = 1:length(currentCluster) % loop through cluster markers
                     currentDonor = currentCluster{cci}; % look at specific donor marker   
                     currentCoordinate = getMarkerCoordinates(markerDict,currentDonor,checkLoc);
                     if any(isnan(currentCoordinate(:)))
+                        currentClusterRemovedNaNs(end+1)=cci;
                         continue
                     end
                     donorTarget = [donorTarget, currentCoordinate]; % save coordinates in first (missing) data matrix
@@ -109,17 +112,24 @@ for mm = 1:length(refmarkerset) % loop through marker set
                         currentCoordinate = getMarkerCoordinates(markerDict,currentDonor,1);
                         donorFull = [donorFull, currentCoordinate];
                         pointFull = getMarkerCoordinates(markerDict,currentMarker,1);
+                        donorFull = []; % I think we should avoid using the first frame as the reference b/c it could be wrong
                     end
                 end
+                currentClusterRemoved = currentCluster;
+                currentClusterRemoved(currentClusterRemovedNaNs) = [];
                 
-                if isempty(donorFull) || any(isnan(donorFull(:)))
-                    for ccr = 1:length(currentCluster) % loop through cluster markers
-                        currentDonor = currentCluster{ccr}; % look at specific donor marker
+                if ~isempty(donorTarget) && (isempty(donorFull) || any(isnan(donorFull(:))))
+                    for ccr = 1:length(currentClusterRemoved) % loop through cluster markers
+                        currentDonor = currentClusterRemoved{ccr}; % look at specific donor marker
                         currentCoordinate = getMarkerCoordinates(markerDictRef,currentDonor,1);
                         donorFullStatic = [donorFullStatic, currentCoordinate]; % save coordinates in full data matrix
                     end
                     donorFull = donorFullStatic;
                     pointFull = getMarkerCoordinates(markerDictRef,currentMarker,1);
+                end
+
+                if size(donorFull,2) < 3
+                    continue
                 end
                 
                 try

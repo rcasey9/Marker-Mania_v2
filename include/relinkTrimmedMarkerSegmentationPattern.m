@@ -1,5 +1,7 @@
-function [markerStruct,markersetToFill,relinkedFlag] = relinkTrimmedMarkerSegmentationPattern(markerStruct,clusters,refmarkerset,debugFlag)
+function [markerStruct,markersetToFill,relinkedFlag] = relinkTrimmedMarkerSegmentationPattern(markerStruct,clusters,refmarkerset,debugFlag,verbose)
+if verbose
 disp('%%%%%Relink Trimmed Marker Segments Using PatternFill%%%%%')
+end
 markerStructname = fieldnames(markerStruct);
 markerStructname = markerStructname{1};
 startFrameOffset = markerStruct.(markerStructname).Header(1);
@@ -25,7 +27,9 @@ for mm = 1:length(refmarkerset) % loop through marker set
     if ~isfield(markerStruct,currentMarker)
         continue
     end
+    if verbose
     disp(['Searching for: ', currentMarker])
+    end
     
 %     markerStructname = fieldnames(markerStruct);
 %     current_temp_names=markerStructname(contains(markerStructname,'C_'));
@@ -140,8 +144,9 @@ for mm = 1:length(refmarkerset) % loop through marker set
 %                             disp('pause')
 %                         end
                         cmp_data_range = cmp_data_range(1):cmp_data_range(end);
+                        if verbose
                         disp(['     PatternFill Found(',num2str(max(referenceDiff),3),') : ', currentMarker,' with ',cmp_marker, ' at frames: ',num2str(cmp_data_range(1)+startFrameOffset-1),' - ',num2str(cmp_data_range(end)+startFrameOffset-1)])
-                        
+                        end
                         markerStruct.(currentMarker).x(cmp_data_range) = markerStruct.(cmp_marker).x(cmp_data_range); % save x
                         markerStruct.(currentMarker).y(cmp_data_range) = markerStruct.(cmp_marker).y(cmp_data_range); % save y
                         markerStruct.(currentMarker).z(cmp_data_range) = markerStruct.(cmp_marker).z(cmp_data_range); % save z

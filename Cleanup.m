@@ -2,10 +2,7 @@ clc; clear; close all;
 viconPath = getViconPath();
 %% Specify paths to folders where your data is stored
 
-folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX06\Biomechanics_data\DOE_TIA_EX_06_PROCESSED\New Session',...
-    'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX07\Biomechanics_data\DOE_TIA_EX_07_PROCESSED\New Session',...
-    'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX08\Biomechanics_data\Full_Collection_PROCESSED\New Session-KE',...
-    'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX08\Biomechanics_data\Full_Collection_PROCESSED\New Session-NoE'};
+folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX09\Biomechanics_data\DOE_TIA_EX_09_PROCESSED\New Session'};
 skiplist = {};
 %% Specify your parameters
 paramStruct.verbose = false; % Determines if low level functions will print information

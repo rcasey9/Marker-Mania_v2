@@ -88,7 +88,7 @@ for mm = 1:length(refmarkerset) % loop through marker set
                 for cci = 1:length(currentCluster) % loop through cluster markers
                     currentDonor = currentCluster{cci}; % look at specific donor marker
                     currentCoordinate = getMarkerCoordinates(markerDict,currentDonor,1:totalFrames)';
-                    if ~all(isnan(currentCoordinate(starting:ending,1)))
+                    if ~all(isnan(currentCoordinate(:,1))) && ~all(isnan(currentCoordinate(starting:ending,1)))
                         patternDiff = currentCoordinate - currentCoordinate(checkLoc,:);
                         PatternMarkerFilled(starting:ending,:) = data(checkLoc,:) + patternDiff(starting:ending,:);
 
