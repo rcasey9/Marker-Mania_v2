@@ -58,22 +58,17 @@ for qq = 1:length(segments)
         diff = 4-length(markers);
         [~, ~, parentMarkers] = vicon.GetSegmentDetails(subject, parent);
         clusterCenter = [0;0;0];
-        markerString = [];
         for ll = 1:length(markers)
             marker = markers{ll};
-            markerString = [markerString marker ','];
-            clusterCenter = clusterCenter + [markerStructRef.(marker).x(1);markerStructRef.(marker).y(1);markerStructRef.(marker).z(1)]./length(markers);
+            clusterCenter = clusterCenter + [markerStructRef.(marker).(x)(1);markerStructRef.(marker).(y)(1);markerStructRef.(marker).(z)(1).^2]./length(markers);
         end
         dists = [];
         for pm = 1:length(parentMarkers)
             parentMarker = parentMarkers{pm};
-            dists(end+1) = sqrt((clusterCenter(1)-markerStructRef.(parentMarker).x(1)).^2 + (clusterCenter(2)-markerStructRef.(parentMarker).y(1)).^2 + (clusterCenter(3)-markerStructRef.(parentMarker).z(1)).^2);
+            dists(end+1) = sqrt((clusterCenter(1)-markerStructRef.(parentMarker).(x)(1)).^2 + (clusterCenter(2)-markerStructRef.(parentMarker).(y)(1)).^2 + (clusterCenter(3)-markerStructRef.(parentMarker).(z)(1)).^2);
         end
-        [~,inds] = sort(dists,'ascend');
         for jj = 1:diff
-            ind = inds(jj);
-          markers{end + 1} = parentMarkers{ind};
-          disp(['Adding ' parentMarkers{ind} ' to cluster: ' markerString])
+          markers{end + 1} = parentMarkers{jj};
         end  
     end
     clusters{qq} = markers;

@@ -18,9 +18,14 @@ for ii = 1:length(files)
 
 
 File = files(ii).name;
+%Copy Static c3d
 copyfile ([filePath '\' File], [finishedDir '\' File],'f')
 copyfile ([filePath '\' File], [workingDir '\' File],'f')
 copyfile ([filePath '\' File], [failedDir '\' File],'f')
+%Copy Static Endnote Filter too
+copyfile ([filePath '\' File(1:end-3) 'Trial.enf'], [finishedDir '\' File(1:end-3) 'Trial.enf'],'f')
+copyfile ([filePath '\' File(1:end-3) 'Trial.enf'], [workingDir '\' File(1:end-3) 'Trial.enf'],'f')
+copyfile ([filePath '\' File(1:end-3) 'Trial.enf'], [failedDir '\' File(1:end-3) 'Trial.enf'],'f')
 end
 
 files = dir(filePath);

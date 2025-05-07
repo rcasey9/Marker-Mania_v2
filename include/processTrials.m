@@ -332,7 +332,7 @@ for j = 1:length(allFileNames)
         try
         markerStruct = Rigid_Body_Fill_All_Gaps(markerSet, markerStruct, clusters,verbose);
         markerStruct = Rigid_Body_Fill_All_Gaps(markerSet, markerStruct, clusters,verbose);
-        markerStruct = Find_Missing_First_And_Last_FramesV3(markerSet, markerStruct, markerStructRef, clusters,verbose);
+        markerStruct = Gap_Fill(markerSet, markerStruct, markerStructRef, clusters);
 
         
         
@@ -364,7 +364,7 @@ for j = 1:length(allFileNames)
        %      missing = true;
        %  end
        if ~missing 
-           
+           disp('Filtering...')
             markerStruct = filterMarkerStruct(markerStruct,cf,lp);
             if heavyOps
                 disp('% Validating that Trial Quality was Preserved %')

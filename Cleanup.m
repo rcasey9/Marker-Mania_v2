@@ -2,7 +2,8 @@ clc; clear; close all;
 viconPath = getViconPath();
 %% Specify paths to folders where your data is stored
 
-folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\EX09\Biomechanics_data\DOE_TIA_EX_09_PROCESSED\New Session'};
+folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\GR02\Biomechanics_data\DOE_TIA_GR_02_PROCESSED\New Session Exo',...
+    };
 skiplist = {};
 %% Specify your parameters
 paramStruct.verbose = false; % Determines if low level functions will print information
@@ -61,9 +62,9 @@ for ii = 1:length(folderList)
 
     folderPath = folderList{ii};
 
-    %[clusters, clusters_jump_threshold, markerStructRef] = getMarkerSet(folderPath, viconPath,custom_jump_thresholds); %get markerstruct and reference frame from static trial
-    %trialList = getFailedTrials(folderPath); % get trial list
-    %cleanupTrials(clusters, markerStructRef,folderPath, trialList, viconPath, paramStruct)
+    [clusters, clusters_jump_threshold, markerStructRef] = getMarkerSet(folderPath, viconPath,custom_jump_thresholds); %get markerstruct and reference frame from static trial
+    trialList = getFailedTrials(folderPath); % get trial list
+    cleanupTrials(clusters, markerStructRef,folderPath, trialList, viconPath, paramStruct)
     finishedtrialList = getFinishedTrials(folderPath);
     T10_relocate(folderPath,finishedtrialList)
     

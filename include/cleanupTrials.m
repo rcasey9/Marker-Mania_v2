@@ -32,17 +32,18 @@ for i = 1:length(trialList)
     fprintf(['\n\n\n\n\tCleaning up Trial ' trialList{i} '\n\n\n\n\n'])
    
         disp('%%%%%%%%%%%%%%%%% Gap Filling %%%%%%%%%%%%%%%%%')
-        try
+        %try
         c3dFile = [folderPath '\Failed\' trialList{i} '.c3d'];
         markerStruct = Vicon.ExtractMarkers(c3dFile);
-        try
+        %try
+        markerStruct = Gap_Fill(markerSet, markerStruct, markerStructRef, clusters);
         markerStruct = Rigid_Body_Fill_All_Gaps(markerSet, markerStruct, clusters,verbose);
         markerStruct = Rigid_Body_Fill_All_Gaps(markerSet, markerStruct, clusters,verbose);
 
         missing = checkForMissingMarkers(markerStruct, markerSet,verbose);
-        catch
-            missing = true;
-        end
+        %catch
+            %missing = true;
+        %end
         if missing
             markerStruct = kinFilling(markerStruct,markerStructRef,[folderPath '\Failed\' trialList{i}],viconPath,folderPath);
 
@@ -81,9 +82,9 @@ for i = 1:length(trialList)
        else
            disp(['Could not fix trial: ' trialList{i}])
        end
-        catch
-            disp(['Could not fix trial: ' trialList{i}])
-            continue
-        end
+        % catch
+        %     disp(['Could not fix trial: ' trialList{i}])
+        %     continue
+        % end
 end
 end

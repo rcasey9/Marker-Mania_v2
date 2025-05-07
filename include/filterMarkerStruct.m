@@ -4,7 +4,7 @@ function [markerStruct] = filterMarkerStruct(markerStruct, cf,lp)
 fs = cf; %low pass filter
 fn=(fs/2); %nyquist freq. (1/2 the sample rate)
 fc=lp; %cutoff freq.
-[b,a]=butter(4,fc/fn); %4th order butterworth filter
+[b,a]=butter(8,fc/fn); %4th order butterworth filter
     
 % FILTER INPUT DATA
 markers = fields(markerStruct);

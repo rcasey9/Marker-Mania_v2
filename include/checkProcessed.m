@@ -65,32 +65,45 @@ for cc = 1:length(clusters)
         fc=lp; %cutoff freq.
         [b,a]=butter(4,fc/fn); %4th order butterworth filter
         filtMErr = filtfilt(b,a,mErr);
+
         if max(mErr) > maxErrThresh
-            if ~contains(markerErrorNames,marker{1})
+            if isempty(markerErrorNames)
+            markerErrorNames{end+1} = marker{1};
+            markerErrors = [markerErrors, mErr];
+            elseif ~any(contains(markerErrorNames,marker{1}))
             markerErrorNames{end+1} = marker{1};
             markerErrors = [markerErrors, mErr];
             end
             disp([marker{1} ' has too much peak marker error: ' num2str(max(mErr)) ' at frame: ' num2str(find(mErr == max(mErr)))])
-            totalMessage = [totalMessage ;{marker{1} ' has too much peak marker error: ' num2str(max(mErr)) ' at frame: ' num2str(find(mErr == max(mErr)))}];
+            totalMessage = [totalMessage ;{[marker{1} ' has too much peak marker error: ' num2str(max(mErr)) ' at frame: ' num2str(find(mErr == max(mErr)))]}];
+            disp(['Cluster: ' cluster]);
             missing = true;
         elseif rmse(zeros(length(filtMErr),1),filtMErr) > errThresh
-            if ~contains(markerErrorNames,marker{1})
+            if isempty(markerErrorNames)
+            markerErrorNames{end+1} = marker{1};
+            markerErrors = [markerErrors, mErr];
+            elseif ~an(contains(markerErrorNames,marker{1}))
             markerErrorNames{end+1} = marker{1};
             markerErrors = [markerErrors, mErr];
             end
             missing = true;
             disp([marker{1} ' has too much total marker error: ' num2str(rmse(zeros(length(filtMErr),1),filtMErr))])
-            totalMessage = [totalMessage; {marker{1} ' has too much total marker error: ' num2str(rmse(zeros(length(filtMErr),1),filtMErr))}];
+            totalMessage = [totalMessage; {[marker{1} ' has too much total marker error: ' num2str(rmse(zeros(length(filtMErr),1),filtMErr))]}];
+            disp(['Cluster: ' cluster]);
         end
         mErr = sort(mErr);
         if max(diff(mErr)) > 50
-            if ~contains(markerErrorNames,marker{1})
+            if isempty(markerErrorNames)
+            markerErrorNames{end+1} = marker{1};
+            markerErrors = [markerErrors, mErr];
+            elseif ~any(contains(markerErrorNames,marker{1}))
             markerErrorNames{end+1} = marker{1};
             markerErrors = [markerErrors, mErr];
             end
             missing = true;
             warning([marker{1} ' has large discontinuities'])
-            totalMessage = [totalMessage ; {marker{1} ' has large discontinuities'}];
+            totalMessage = [totalMessage ; {[marker{1} ' has large discontinuities']}];
+            disp(['Cluster: ' cluster]);
             
         end
         
@@ -103,7 +116,6 @@ catch
 
 end
 if ~isempty(totalMessage)
-
     T = array2table(markerErrors,'VariableNames',markerErrorNames);
     save([textFileName(1:end-4) '_MarkerErrors.mat'],'T')
     fileID = fopen(textFileName, 'w');

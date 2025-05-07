@@ -12,8 +12,8 @@ end
 files = files(index);
 trialList = {};
 for ii = 1:length(files)
-    file = files(ii).name;
-    keep = true;
+    file = files(ii).name;    
+    keep = true;    
     for jj = 1:length(rmPattern)
         if contains(file,rmPattern{jj})
             keep = false;
