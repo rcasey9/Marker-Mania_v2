@@ -64,7 +64,7 @@ for ii = 1:length(folderList)
 
     [clusters, clusters_jump_threshold, markerStructRef] = getMarkerSet(folderPath, viconPath,custom_jump_thresholds); %get markerstruct and reference frame from static trial
     trialList = getFailedTrials(folderPath); % get trial list
-    cleanupTrials(clusters, markerStructRef,folderPath, trialList, viconPath, paramStruct)
+    cleanupTrials(clusters, markerStructRef,folderPath, trialList, viconPath, paramStruct);
     finishedtrialList = getFinishedTrials(folderPath);
     T10_relocate(folderPath,finishedtrialList)
     
