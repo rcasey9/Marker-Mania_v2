@@ -366,11 +366,10 @@ for j = 1:length(allFileNames)
        if ~missing 
            disp('Filtering...')
             markerStruct = filterMarkerStruct(markerStruct,cf,lp);
-            if heavyOps
-                disp('% Validating that Trial Quality was Preserved %')
-                markerDict = markerStruct2dict(markerStruct); 
-                missing = checkProcessed(clusters,markerDict,markerStructRef,cf,lp,[folderPath '\Failed\Diagnostics\' trialList{i} '.txt']);
-            end
+
+            disp('% Validating that Trial Quality was Preserved %')
+            markerDict = markerStruct2dict(markerStruct); 
+            missing = checkProcessed(clusters,markerDict,markerStructRef,cf,lp,[folderPath '\Failed\Diagnostics\' trialList{i} '.txt']);
        end
        if ~missing
 

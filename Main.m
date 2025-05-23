@@ -3,7 +3,7 @@ viconPath = getViconPath();
 %% Specify paths to folders where your data is stored
 
 folderList = {
-    'C:\Users\rcasey9\Downloads\Subject_09\Subject_09\New Session Exo'...
+    'C:\Users\rcasey9\Downloads\Subject_09_PROCESSED\Subject_09\New Session Exo'...
     };
 skiplist = {};
 %% Specify your parameters
