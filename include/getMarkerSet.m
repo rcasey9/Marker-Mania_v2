@@ -54,6 +54,22 @@ clusters = {};
 for qq = 1:length(segments)
     segment = segments{qq};
     [parent, ~, markers] = vicon.GetSegmentDetails(subject, segment);
+    jj = 1;
+    %%Check if marker has been detached or isn't labeled
+    while jj <= length(markers)
+        marker = markers{jj};
+        try
+            check = markerStructRef.(marker).x(1);
+        catch 
+            markers(jj) = [];
+            continue
+        end
+        if isnan(check)
+             markers(jj) = [];
+             continue
+        end
+        jj = jj+1;
+    end
     if length(markers) < 4
         diff = 4-length(markers);
         [~, ~, parentMarkers] = vicon.GetSegmentDetails(subject, parent);

@@ -23,7 +23,7 @@ zbound = paramStruct.zbound;
 
 %%  DEFINE RIGID BODY MARKER CLUSTERS
 
-markerSet = unique([clusters{:}]);
+markerSet = unique([clusters{:}])
 clustersOriginal = clusters;
 
 
@@ -87,7 +87,7 @@ for i = 1:length(trialList)
 
     if kinFillStart
             markerStruct = kinFilling(markerStruct,markerStructRef,[folderPath '\Working\' trialList{i}],viconPath,folderPath);
-            heavyOps = true;
+            heavyOps = true
     end
     
 
@@ -224,7 +224,7 @@ for i = 1:length(trialList)
 
     %% Check preprocessed outcome
     markerDict = markerStruct2dict(markerStruct);
-    labelingIssue = checkPreprocessed(clusters,markerDict,markerStructRef);
+    labelingIssue = checkPreprocessed(clusters,markerDict,markerStructRef)
     end
     if labelingIssue
         if kinFillStart == 1
@@ -341,13 +341,13 @@ for j = 1:length(allFileNames)
         checkForJumpingMarkers(markerSet,markerStruct,markerStructRef,jumpThreshold,jumpSpeedThreshold,gap_len,clusters,verbose);
 
         %Check for missing markers (should all be filled)
-        missing = checkForMissingMarkers(markerStruct, markerSet,verbose);
+        missing = checkForMissingMarkers(markerStruct, markerSet,verbose)
         catch
             if kinFillStart
-                doneWithTrial = true;
+                doneWithTrial = true
                 continue
             end
-            kinFillStart = 1;
+            kinFillStart = 1
             combinedProcessingPipeline = handleFailedTrial(2,combinedProcessingPipeline);
             continue
         end

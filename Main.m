@@ -2,7 +2,8 @@ clc; clear; close all;
 viconPath = getViconPath();
 %% Specify paths to folders where your data is stored
 
-folderList = {'C:\Users\rcasey9\GaTech Dropbox\Ryan Casey\DOE_Exos\Experiments\DOE_Task_Invariant_Protocol\GRAHAM_Collections\GR02\Biomechanics_data\DOE_TIA_GR_02_PROCESSED\New Session Exo',...
+folderList = {
+    'C:\Users\rcasey9\Downloads\Subject_09\Subject_09\New Session Exo'...
     };
 skiplist = {};
 %% Specify your parameters
